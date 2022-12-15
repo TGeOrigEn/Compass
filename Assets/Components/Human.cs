@@ -1,8 +1,13 @@
+using System;
 using System.Diagnostics;
 using UnityEngine;
 
 public class Human : MonoBehaviour
 {
+    const double D_Y = 7366253.21162507d;
+
+    const double D_X = 8159688.44005576d;
+
     public bool locationPermission = UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.CoarseLocation);
  
     public Vector2 position;
@@ -16,26 +21,36 @@ public class Human : MonoBehaviour
 
     void Update()
     {
-        if (locationPermission)
+        if (RequestPermission())
         {
             var locationInfo = GetLocationInfo();
             if (!locationInfo.Equals(new LocationInfo()))
             {
-                position = new(locationInfo.altitude * 10000f - 550230f, locationInfo.latitude * 10000f - 732980f);
-                angle = Input.gyro.userAcceleration.x;
+                position = new(X(locationInfo), Y(locationInfo));
+                angle = Input.gyro.attitude.x;
             }
         }
 
         transform.position = position;
 
-        transform.eulerAngles = new Vector3(0, 0, angle);
+        transform.localEulerAngles = new Vector3(0, 0, angle);
+    }
+
+    public float X(LocationInfo locationInfo)
+    {
+        var x = locationInfo.longitude * 2 * Math.PI * 6378137 / 2 / 180;
+        return (float)(x - D_X);
+    }
+
+    public float Y(LocationInfo locationInfo)
+    {
+        var y = Math.Log(Math.Tan((90 + locationInfo.latitude) * Math.PI / 360)) / (Math.PI / 180);
+        y = y * 2 * Math.PI * 6378137 / 2 / 180;
+        return (float)(y - D_Y);
     }
 
     private static LocationInfo GetLocationInfo()
     {
-        if (!RequestPermission())
-            return new LocationInfo();
-
         Input.location.Start(1f, 1f);
 
         var stopWatch = new Stopwatch();
